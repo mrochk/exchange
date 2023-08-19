@@ -1,4 +1,8 @@
-package limit_heap
+/*
+   Implementing the std/container/heap interface.
+*/
+
+package limit
 
 import (
 	"github.com/mrochk/exchange/limit"
@@ -16,13 +20,12 @@ func (h LimitHeap) Len() int {
 }
 
 func (h LimitHeap) Less(i, j int) bool {
-	// If we are dealing with ask limits, we wanna
-	// rank first the limit having the lowest price.
+	/* When dealing with ask limits, we prioritize the limit having
+	the lowest price. */
 	if h[i].LimitType == limit.Ask {
 		return h[i].Price < h[j].Price
 	}
-	// If we are dealing with bid limits, we wanna
-	// rank first the limit having the highest price.
+	/* When dealing with bid limits, we do the contrary. */
 	return h[i].Price > h[j].Price
 }
 

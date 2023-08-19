@@ -1,4 +1,4 @@
-package limit_heap
+package limit
 
 import (
 	"container/heap"
