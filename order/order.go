@@ -1,11 +1,13 @@
 package order
 
-import "fmt"
+import "time"
 
 type Order struct {
-	Quantity   float64
 	Identifier int64
-	OrderType  OrderType
+	OType      OrderType
+	Quantity   float64
+	Timestamp  int64
+	Issuer     string
 }
 
 type OrderType int
@@ -15,24 +17,12 @@ const (
 	Sell
 )
 
-func NewOrder(qty float64, id int64, t OrderType) *Order {
+func NewOrder(id int64, t OrderType, qty float64, i string) *Order {
 	return &Order{
-		Quantity:   qty,
 		Identifier: id,
-		OrderType:  t,
+		OType:      t,
+		Quantity:   qty,
+		Timestamp:  time.Now().Unix(),
+		Issuer:     i,
 	}
-}
-
-func (o Order) String() string {
-	ret := fmt.Sprintf("Order %d\n", o.Identifier)
-	ret += fmt.Sprintf("    qty: %.2f\n", o.Quantity)
-	ret += fmt.Sprintf("    type: %s\n", fmt.Sprint(o.OrderType))
-	return ret
-}
-
-func (t OrderType) String() string {
-	if t == Buy {
-		return "Buy"
-	}
-	return "Sell"
 }

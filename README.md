@@ -1,2 +1,2 @@
 # Exchange
-Market exchange simulation (with API and UI).
+Market exchange simulation.

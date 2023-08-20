@@ -3,22 +3,18 @@ package uid
 import "time"
 
 type UIDGenerator struct {
-	last      int64
-	increment int64
+	last, increment int64
 }
 
-func NewUIDGenerator() UIDGenerator {
-	return UIDGenerator{0, 0}
-}
+func NewUIDGenerator() *UIDGenerator { return &UIDGenerator{0, 0} }
 
 func (u *UIDGenerator) NewUID() int64 {
-	now := time.Now().Unix()
-	if now == u.last {
-		now += u.increment + 1
+	new := time.Now().Unix()
+	if new == u.last {
 		u.increment++
+		new += u.increment
 	} else {
-		u.last = now
-		u.increment = 0
+		u.last, u.increment = new, 0
 	}
-	return now
+	return new
 }
