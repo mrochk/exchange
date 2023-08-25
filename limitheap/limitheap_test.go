@@ -13,10 +13,10 @@ func TestLimitHeap(t *testing.T) {
 	l := limit.NewLimit(limit.Bid, 1)
 	ll := limit.NewLimit(limit.Bid, 2)
 
-	heap.Push(hp, l)
-	heap.Push(hp, ll)
+	heap.Push(&hp, l)
+	heap.Push(&hp, ll)
 
-	if heap.Pop(hp).(*limit.Limit).Price != 2 {
+	if heap.Pop(&hp).(*limit.Limit).Price != 2 {
 		t.Fail()
 	}
 
@@ -26,10 +26,10 @@ func TestLimitHeap(t *testing.T) {
 	l = limit.NewLimit(limit.Ask, 1)
 	ll = limit.NewLimit(limit.Ask, 2)
 
-	heap.Push(hp, l)
-	heap.Push(hp, ll)
+	heap.Push(&hp, l)
+	heap.Push(&hp, ll)
 
-	if heap.Pop(hp).(*limit.Limit).Price != 1 {
+	if heap.Pop(&hp).(*limit.Limit).Price != 1 {
 		t.Fail()
 	}
 }

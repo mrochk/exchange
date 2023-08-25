@@ -1,15 +1,26 @@
 package limitheap
 
 import (
+	"container/heap"
+
 	"github.com/mrochk/exchange/limit"
 )
 
 type LimitHeap []*limit.Limit
 
-func NewLimitHeap() *LimitHeap {
+func NewLimitHeap() LimitHeap {
 	ret := make(LimitHeap, 0)
-	return &ret
+	return ret
 }
+
+func (l LimitHeap) PopLimit() *limit.Limit {
+	if len(l) == 0 {
+		return nil
+	}
+	return heap.Pop(&l).(*limit.Limit)
+}
+
+/* std/container/heap interface impl. */
 
 func (hp *LimitHeap) Push(x any) {
 	*hp = append(*hp, x.(*limit.Limit))

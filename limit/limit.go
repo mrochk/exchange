@@ -2,6 +2,7 @@ package limit
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/mrochk/exchange/order"
 	"github.com/mrochk/exchange/orderq"
@@ -32,7 +33,9 @@ func NewLimit(t LimitType, price float64) *Limit {
 
 func (l *Limit) AddOrder(o *order.Order) error {
 	if !l.validOrder(o) {
-		return errors.New("non compatible order")
+		msg := fmt.Sprintf("limit type (%s) incompatible with order type (%s)",
+			l.LType, o.OType)
+		return errors.New(msg)
 	}
 	l.orders.Insert(o)
 	l.Size += o.Quantity
@@ -44,7 +47,14 @@ func (l *Limit) PopFirstOrder() *order.Order {
 }
 
 func (l *Limit) validOrder(o *order.Order) bool {
-	a := (l.LType == Bid && o.OType == order.Buy)
-	b := (l.LType == Ask && o.OType == order.Sell)
-	return a || b
+	A := (l.LType == Bid && o.OType == order.Buy)
+	B := (l.LType == Ask && o.OType == order.Sell)
+	return A || B
+}
+
+func (t LimitType) String() string {
+	if t == Bid {
+		return "BID"
+	}
+	return "ASK"
 }

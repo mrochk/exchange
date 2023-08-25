@@ -26,3 +26,10 @@ func NewOrder(id int64, t OrderType, qty float64, i string) *Order {
 		Issuer:     i,
 	}
 }
+
+func (t OrderType) String() string {
+	if t == Buy {
+		return "BUY"
+	}
+	return "SELL"
+}
