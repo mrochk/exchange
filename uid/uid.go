@@ -3,10 +3,16 @@ package uid
 import "time"
 
 type UIDGenerator struct {
-	last, increment int64
+	last      int64
+	increment int64
 }
 
-func NewUIDGenerator() *UIDGenerator { return &UIDGenerator{0, 0} }
+func NewUIDGenerator() *UIDGenerator {
+	return &UIDGenerator{
+		last:      0,
+		increment: 0,
+	}
+}
 
 func (u *UIDGenerator) NewUID() int64 {
 	new := time.Now().Unix()

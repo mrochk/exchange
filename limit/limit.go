@@ -43,9 +43,17 @@ func (l *Limit) AddOrder(o *order.Order) error {
 }
 
 func (l *Limit) PopFirstOrder() *order.Order {
+	l.Size -= l.orders.GetFirstOrder().Quantity
 	return l.orders.PopFirstOrder()
 }
 
+func (l *Limit) GetFirstOrder() *order.Order {
+	return l.orders.GetFirstOrder()
+}
+
+func (l Limit) OrdersCount() int {
+	return l.orders.Size
+}
 func (l *Limit) validOrder(o *order.Order) bool {
 	A := (l.LType == Bid && o.OType == order.Buy)
 	B := (l.LType == Ask && o.OType == order.Sell)
@@ -57,4 +65,11 @@ func (t LimitType) String() string {
 		return "BID"
 	}
 	return "ASK"
+}
+
+func (l Limit) String() string {
+	ret := fmt.Sprintf("\nLimit at %.1f,\n    type: %s, ", l.Price, l.LType)
+	ret += fmt.Sprintf("\n    size: %.1f, ", l.Size)
+	ret += fmt.Sprintf("\n    n_orders: %d\n", l.orders.Size)
+	return ret
 }

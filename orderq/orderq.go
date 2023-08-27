@@ -42,3 +42,11 @@ func (q *OrderQ) PopFirstOrder() *order.Order {
 	q.Size--
 	return ret
 }
+
+func (q *OrderQ) GetFirstOrder() *order.Order {
+	if q.Empty() {
+		return nil
+	}
+	ret := q.first.data
+	return ret
+}
