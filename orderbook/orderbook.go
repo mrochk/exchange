@@ -99,6 +99,7 @@ func (ob *OrderBook) executeOrder(o *order.Order) error {
 			ob.bidLimits[0].GetFirstOrder().Quantity -= o.Quantity
 			ob.bidLimits[0].Size -= o.Quantity
 			o.Quantity = 0
+			ob.Price = ob.bidLimits[0].Price
 		}
 	} else /* Buy Order */ {
 		if len(ob.askLimits) == 0 {
@@ -123,10 +124,10 @@ func (ob *OrderBook) executeOrder(o *order.Order) error {
 		}
 
 		if o.Quantity > 0 {
-			fmt.Println(o.Quantity)
 			ob.askLimits[0].GetFirstOrder().Quantity -= o.Quantity
 			ob.askLimits[0].Size -= o.Quantity
 			o.Quantity = 0
+			ob.Price = ob.askLimits[0].Price
 		}
 	}
 	return nil
