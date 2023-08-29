@@ -67,11 +67,8 @@ func TestExecuteOrder(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	fmt.Println(ob.bidLimits)
-	fmt.Println()
 	err = ob.ExecuteOrder(order.Sell, 50, "maxime")
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(ob.bidLimits)
 }

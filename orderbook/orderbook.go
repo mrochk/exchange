@@ -19,7 +19,7 @@ type OrderBook struct {
 	MidPrice     float64 // (Lowest ask limit price + Highest bid l. p.) / 2
 	Size         int     // The number of orders placed.
 	uidGenerator *uid.UIDGenerator
-	askLimits    limits.Limits
+	AskLimits    limits.Limits
 	bidLimits    limits.Limits
 	askLimitsMap map[float64]*limit.Limit
 	bidLimitsMap map[float64]*limit.Limit
@@ -33,7 +33,7 @@ func NewOrderBook(base, quote string) *OrderBook {
 		MidPrice:     -1,
 		Size:         0,
 		uidGenerator: uid.NewUIDGenerator(),
-		askLimits:    limits.NewLimits(),
+		AskLimits:    limits.NewLimits(),
 		bidLimits:    limits.NewLimits(),
 		askLimitsMap: make(map[float64]*limit.Limit),
 		bidLimitsMap: make(map[float64]*limit.Limit),
@@ -102,32 +102,32 @@ func (ob *OrderBook) executeOrder(o *order.Order) error {
 			ob.Price = ob.bidLimits[0].Price
 		}
 	} else /* Buy Order */ {
-		if len(ob.askLimits) == 0 {
+		if len(ob.AskLimits) == 0 {
 			msg := fmt.Sprintf("Can not execute order %d, "+
 				"no ask limits.", o.Timestamp)
 			return errors.New(msg)
 		}
 
-		for len(ob.askLimits) > 0 && o.Quantity >= ob.askLimits[0].Size {
-			o.Quantity -= ob.askLimits[0].Size
-			ob.Size -= ob.askLimits[0].OrdersCount()
-			ob.Price = ob.askLimits[0].Price
-			ob.askLimits.DeleteFirst()
+		for len(ob.AskLimits) > 0 && o.Quantity >= ob.AskLimits[0].Size {
+			o.Quantity -= ob.AskLimits[0].Size
+			ob.Size -= ob.AskLimits[0].OrdersCount()
+			ob.Price = ob.AskLimits[0].Price
+			ob.AskLimits.DeleteFirst()
 		}
 
-		for len(ob.askLimits) > 0 && ob.askLimits[0].Size > 0 &&
-			o.Quantity >= ob.askLimits[0].GetFirstOrder().Quantity {
-			ord := ob.askLimits[0].PopFirstOrder()
-			ob.Price = ob.askLimits[0].Price
+		for len(ob.AskLimits) > 0 && ob.AskLimits[0].Size > 0 &&
+			o.Quantity >= ob.AskLimits[0].GetFirstOrder().Quantity {
+			ord := ob.AskLimits[0].PopFirstOrder()
+			ob.Price = ob.AskLimits[0].Price
 			o.Quantity -= ord.Quantity
 			ob.Size--
 		}
 
 		if o.Quantity > 0 {
-			ob.askLimits[0].GetFirstOrder().Quantity -= o.Quantity
-			ob.askLimits[0].Size -= o.Quantity
+			ob.AskLimits[0].GetFirstOrder().Quantity -= o.Quantity
+			ob.AskLimits[0].Size -= o.Quantity
 			o.Quantity = 0
-			ob.Price = ob.askLimits[0].Price
+			ob.Price = ob.AskLimits[0].Price
 		}
 	}
 	return nil
@@ -154,7 +154,7 @@ func (ob *OrderBook) placeOrder(price float64, o *order.Order) error {
 				return err
 			}
 			ob.askLimitsMap[price] = l
-			ob.askLimits = ob.askLimits.Insert(l)
+			ob.AskLimits = ob.AskLimits.Insert(l)
 		} else {
 			ob.askLimitsMap[price].AddOrder(o)
 		}
@@ -166,8 +166,8 @@ func (ob *OrderBook) canPlaceOrder(price float64, t order.OrderType) bool {
 	if t == order.Buy {
 		// Does not make sense to place a buy limit order
 		// higher or equal than the smallest ask limit.
-		empty := len(ob.askLimits) == 0
-		if !empty && !(price < ob.askLimits[0].Price) {
+		empty := len(ob.AskLimits) == 0
+		if !empty && !(price < ob.AskLimits[0].Price) {
 			return false
 		}
 	} else /* Sell Order */ {
@@ -182,8 +182,8 @@ func (ob *OrderBook) canPlaceOrder(price float64, t order.OrderType) bool {
 }
 
 func (ob *OrderBook) updateMidPrice() {
-	if len(ob.askLimits) > 0 && len(ob.bidLimits) > 0 {
-		askPrice := ob.askLimits[0].Price
+	if len(ob.AskLimits) > 0 && len(ob.bidLimits) > 0 {
+		askPrice := ob.AskLimits[0].Price
 		bidPrice := ob.bidLimits[0].Price
 		ob.MidPrice = (askPrice + bidPrice) / 2
 	}
@@ -192,13 +192,13 @@ func (ob *OrderBook) updateMidPrice() {
 func (ob OrderBook) String() string {
 	ret := fmt.Sprintf("OrderBook %s / %s:\n\n", ob.base, ob.quote)
 	var lim int
-	if len(ob.askLimits) <= 10 {
-		lim = len(ob.askLimits)
+	if len(ob.AskLimits) <= 10 {
+		lim = len(ob.AskLimits)
 	} else {
 		lim = 10
 	}
 	for i := lim - 1; i >= 0; i-- {
-		ret += fmt.Sprintf("[%.2f] orders: %d, size: %.1f\n", ob.askLimits[i].Price, ob.askLimits[i].OrdersCount(), ob.askLimits[i].Size)
+		ret += fmt.Sprintf("[%.2f] orders: %d, size: %.1f\n", ob.AskLimits[i].Price, ob.AskLimits[i].OrdersCount(), ob.AskLimits[i].Size)
 	}
 	ret += fmt.Sprintf("\nMidprice: %.2f, Price: %.2f, Number of orders: %d\n\n", ob.MidPrice, ob.Price, ob.Size)
 
