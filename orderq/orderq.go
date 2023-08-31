@@ -17,10 +17,6 @@ func NewOrderQ() OrderQ {
 	return OrderQ{0, nil, nil}
 }
 
-func (q OrderQ) Empty() bool {
-	return q.Size == 0
-}
-
 func (q *OrderQ) Insert(o *order.Order) {
 	if q.Empty() {
 		q.first = &OrderQCell{o, nil}
@@ -30,6 +26,14 @@ func (q *OrderQ) Insert(o *order.Order) {
 		q.last = q.last.next
 	}
 	q.Size++
+}
+
+func (q *OrderQ) GetFirstOrder() *order.Order {
+	if q.Empty() {
+		return nil
+	}
+	ret := q.first.data
+	return ret
 }
 
 // Must check if return value is not nil (empty queue).
@@ -43,10 +47,6 @@ func (q *OrderQ) PopFirstOrder() *order.Order {
 	return ret
 }
 
-func (q *OrderQ) GetFirstOrder() *order.Order {
-	if q.Empty() {
-		return nil
-	}
-	ret := q.first.data
-	return ret
+func (q OrderQ) Empty() bool {
+	return q.Size == 0
 }

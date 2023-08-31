@@ -54,6 +54,7 @@ func (l *Limit) GetFirstOrder() *order.Order {
 func (l Limit) OrdersCount() int {
 	return l.orders.Size
 }
+
 func (l *Limit) validOrder(o *order.Order) bool {
 	A := (l.LType == Bid && o.OType == order.Buy)
 	B := (l.LType == Ask && o.OType == order.Sell)
