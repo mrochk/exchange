@@ -1,6 +1,8 @@
 package uid
 
-import "time"
+import (
+	"time"
+)
 
 type UIDGenerator struct {
 	last      int64
@@ -16,7 +18,7 @@ func NewUIDGenerator() *UIDGenerator {
 
 func (u *UIDGenerator) NewUID() int64 {
 	new := time.Now().Unix()
-	if new == u.last {
+	if new <= u.last+u.increment {
 		u.increment++
 		new += u.increment
 	} else {

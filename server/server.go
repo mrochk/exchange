@@ -18,9 +18,9 @@ type Server struct {
 
 type serverFunc func(http.ResponseWriter, *http.Request) error
 
-func NewServer(addr string, port string, exchange *exchange.Exchange) *Server {
+func NewServer(addr string, port int, exchange *exchange.Exchange) *Server {
 	return &Server{
-		listenaddr: addr + ":" + port,
+		listenaddr: addr + ":" + strconv.FormatInt(int64(port), 10),
 		exchange:   exchange,
 	}
 }
@@ -46,6 +46,7 @@ func (s *Server) Run() {
 	router.HandleFunc("/getorderbooks", makeHTTPHandleFunc(s.handleGetOrderBooks))
 	router.HandleFunc("/createorderbook", makeHTTPHandleFunc(s.handleCreateOrderBook))
 	router.HandleFunc("/placeorder", makeHTTPHandleFunc(s.handlePlaceOrder))
+	router.HandleFunc("/executeorder", makeHTTPHandleFunc(s.handleExecuteOrder))
 
 	fmt.Printf("Server running on \"%s\"...\n", s.listenaddr)
 	err := http.ListenAndServe(s.listenaddr, router)
@@ -137,7 +138,7 @@ func (s *Server) handlePlaceOrder(w http.ResponseWriter, r *http.Request) error 
 	var price float64
 	p := r.Header.Get("price")
 	if p == "" {
-		msg := fmt.Sprintf("invalid type value (%s)", p)
+		msg := fmt.Sprintf("invalid price value (%s)", p)
 		return errors.New(msg)
 	} else {
 		price, err = strconv.ParseFloat(p, 64)
@@ -172,5 +173,68 @@ func (s *Server) handlePlaceOrder(w http.ResponseWriter, r *http.Request) error 
 	}
 
 	writeJSON(w, http.StatusOK, "order placed")
+	return nil
+}
+
+func (s *Server) handleExecuteOrder(w http.ResponseWriter, r *http.Request) error {
+	var err error
+
+	if r.Method != http.MethodPost {
+		msg := fmt.Sprintf("method not allowed: (%s)", r.Method)
+		return errors.New(msg)
+	}
+
+	base := r.Header.Get("base")
+	quote := r.Header.Get("quote")
+
+	if base == "" || quote == "" {
+		msg := fmt.Sprintf("empty <base> (%s) or <quote> (%s) key",
+			base, quote)
+		return errors.New(msg)
+	}
+
+	obID := base + "/" + quote
+	if !s.exchange.OrderbookExists(obID) {
+		msg := fmt.Sprintf("orderbook %s does not exist", obID)
+		return errors.New(msg)
+	}
+
+	var ordertype order.OrderType
+	t := r.Header.Get("type")
+	if t == "BUY" {
+		ordertype = order.Buy
+	} else if t == "SELL" {
+		ordertype = order.Sell
+	} else {
+		msg := fmt.Sprintf("invalid type value (%s)", t)
+		return errors.New(msg)
+	}
+
+	var qty float64
+	q := r.Header.Get("quantity")
+	if q == "" {
+		msg := fmt.Sprintf("invalid quantity value (%s)", q)
+		return errors.New(msg)
+	} else {
+		qty, err = strconv.ParseFloat(q, 64)
+		if err != nil {
+			return err
+		}
+	}
+
+	var issuer string
+	i := r.Header.Get("issuer")
+	if i == "" {
+		msg := fmt.Sprintf("invalid issuer value (%s)", i)
+		return errors.New(msg)
+	}
+	issuer = i
+
+	err = s.exchange.ExecuteOrder(base, quote, ordertype, qty, issuer)
+	if err != nil {
+		return err
+	}
+
+	writeJSON(w, http.StatusOK, "order executed")
 	return nil
 }
