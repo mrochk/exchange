@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/mrochk/exchange/exchange"
+	"github.com/mrochk/exchange/limits"
 	"github.com/mrochk/exchange/order"
 )
 
@@ -47,11 +49,11 @@ func (s *Server) Run() {
 	router.HandleFunc("/createorderbook", makeHTTPHandleFunc(s.handleCreateOrderBook))
 	router.HandleFunc("/placeorder", makeHTTPHandleFunc(s.handlePlaceOrder))
 	router.HandleFunc("/executeorder", makeHTTPHandleFunc(s.handleExecuteOrder))
+	router.HandleFunc("/getobdata", makeHTTPHandleFunc(s.handleGetOrderBookData))
 
-	fmt.Printf("Server running on \"%s\"...\n", s.listenaddr)
 	err := http.ListenAndServe(s.listenaddr, router)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprint(os.Stdout, err)
 	}
 }
 
@@ -236,5 +238,59 @@ func (s *Server) handleExecuteOrder(w http.ResponseWriter, r *http.Request) erro
 	}
 
 	writeJSON(w, http.StatusOK, "order executed")
+	return nil
+}
+
+type OrderBookData struct {
+	Base           string        `json:"base"`
+	Quote          string        `json:"quote"`
+	Price          float64       `json:"price"`
+	MidPrice       float64       `json:"mid_price"`
+	NumberOfOrders int           `json:"n_orders"`
+	AskLimitsSize  float64       `json:"ask_limits_size"`
+	BidLimitsSize  float64       `json:"bid_limits_size"`
+	AskLimits      limits.Limits `json:"ask_limits"`
+	BidLimits      limits.Limits `json:"bid_limits"`
+}
+
+func (s *Server) handleGetOrderBookData(w http.ResponseWriter,
+	r *http.Request) error {
+	if r.Method != http.MethodGet {
+		msg := fmt.Sprintf("method not allowed: (%s)", r.Method)
+		return errors.New(msg)
+	}
+
+	base := r.Header.Get("base")
+	if base == "" {
+		return errors.New("base key is empty")
+	}
+
+	quote := r.Header.Get("quote")
+	if quote == "" {
+		return errors.New("quote key is empty")
+	}
+
+	obID := base + "/" + quote
+	if !s.exchange.OrderbookExists(obID) {
+		msg := fmt.Sprintf("orderbook does not exist for %s / %s",
+			base, quote)
+		return errors.New(msg)
+	}
+
+	ob := s.exchange.GetOrderBook(base, quote)
+
+	result := OrderBookData{
+		Base:           base,
+		Quote:          quote,
+		Price:          ob.Price,
+		MidPrice:       ob.MidPrice,
+		NumberOfOrders: ob.NumberOfOrders,
+		AskLimitsSize:  ob.AskLimitsSize,
+		BidLimitsSize:  ob.BidLimitsSize,
+		AskLimits:      ob.AskLimits,
+		BidLimits:      ob.BidLimits,
+	}
+
+	writeJSON(w, http.StatusOK, result)
 	return nil
 }

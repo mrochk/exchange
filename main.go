@@ -44,14 +44,16 @@ func main() {
 	e.PlaceOrder("ETH", "BTC", order.Buy, 589, 10, "maxime")
 	e.PlaceOrder("ETH", "BTC", order.Buy, 100, 10, "maxime")
 
-	s := server.NewServer("127.0.0.1", 8080, e)
+	addr := "127.0.0.1"
+	port := 8080
+	s := server.NewServer(addr, port, e)
 	go s.Run()
+	fmt.Printf("Server running on \"%s:8080\"...\n", addr)
 	for {
-		fmt.Println(e.GetOrderBook("ETH", "BTC"))
-
-		time.Sleep(time.Second)
 		cmd := exec.Command("clear")
 		cmd.Stdout = os.Stdout
 		cmd.Run()
+		fmt.Println(e.GetOrderBook("ETH", "BTC"))
+		time.Sleep(time.Second)
 	}
 }
