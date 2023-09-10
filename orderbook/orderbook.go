@@ -207,7 +207,7 @@ func (ob *OrderBook) updateMidPrice() {
 }
 
 func (ob OrderBook) String() string {
-	ret := fmt.Sprintf("OrderBook %s / %s:\n\n", ob.base, ob.quote)
+	ret := fmt.Sprintf("___________________\nOrder book %s/%s:\n", ob.base, ob.quote)
 	var lim int
 	if len(ob.AskLimits) <= 10 {
 		lim = len(ob.AskLimits)
@@ -217,7 +217,7 @@ func (ob OrderBook) String() string {
 	for i := lim - 1; i >= 0; i-- {
 		ret += fmt.Sprintf("\033[31m[%.3f] orders: %d, size: %.1f, next order issuer: %s\033[0m\n", ob.AskLimits[i].Price, ob.AskLimits[i].OrdersCount(), ob.AskLimits[i].Size, ob.AskLimits[i].GetFirstOrder().Issuer)
 	}
-	ret += fmt.Sprintf("\nMidprice: %.2f, Price: %.2f\nNumber of orders: %d, Ask lim. size: %.1f, Bid lim. size: %.1f\n\n", ob.MidPrice, ob.Price, ob.NumberOfOrders, ob.AskLimitsSize, ob.BidLimitsSize)
+	ret += fmt.Sprintf("\n\033[0;34mMidprice: %.2f, Price: %.2f\nNumber of orders: %d, Ask lim. size: %.1f, Bid lim. size: %.1f\033[0m\n\n", ob.MidPrice, ob.Price, ob.NumberOfOrders, ob.AskLimitsSize, ob.BidLimitsSize)
 
 	if len(ob.BidLimits) <= 10 {
 		lim = len(ob.BidLimits)

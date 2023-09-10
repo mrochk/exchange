@@ -6,15 +6,21 @@ import (
 
 	"github.com/mrochk/exchange/order"
 	"github.com/mrochk/exchange/orderbook"
+	"github.com/mrochk/exchange/uid"
+	"github.com/mrochk/exchange/user"
 )
 
 type Exchange struct {
-	OrderBooks map[string]*orderbook.OrderBook
+	OrderBooks      map[string]*orderbook.OrderBook
+	users           map[int64]*user.User
+	userIDGenerator *uid.UIDGenerator
 }
 
 func NewExchange() *Exchange {
 	return &Exchange{
-		OrderBooks: make(map[string]*orderbook.OrderBook),
+		OrderBooks:      make(map[string]*orderbook.OrderBook),
+		users:           make(map[int64]*user.User),
+		userIDGenerator: uid.NewUIDGenerator(),
 	}
 }
 
@@ -26,6 +32,12 @@ func (e Exchange) NewOrderBook(base string, quote string) error {
 	}
 	e.OrderBooks[obID] = orderbook.NewOrderBook(base, quote)
 	return nil
+}
+
+func (e *Exchange) RegisterUser(username string) int64 {
+	uid := e.userIDGenerator.NewUID()
+	e.users[uid] = user.NewUser(username, uid)
+	return uid
 }
 
 func (e *Exchange) PlaceOrder(base string, quote string, t order.OrderType,

@@ -20,13 +20,13 @@ const (
 	Sell
 )
 
-func NewOrder(id int64, t OrderType, qty float64, i string) *Order {
+func NewOrder(id int64, t OrderType, qty float64, issuer string) *Order {
 	return &Order{
 		Identifier: id,
 		OType:      t,
 		Quantity:   qty,
 		Timestamp:  time.Now().Unix(),
-		Issuer:     i,
+		Issuer:     issuer,
 	}
 }
 
