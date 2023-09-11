@@ -10,22 +10,23 @@ import (
 	"github.com/mrochk/exchange/uid"
 )
 
-// An order-book is a collection of bid and ask limits containing orders.
+/* The order-book is a collection of bid and ask limits containing orders. */
 type OrderBook struct {
-	base           string  // Base currency.
-	quote          string  // Quote currency.
+	base           string  // Base asset.
+	quote          string  // Quote asset.
 	Price          float64 // Price at which the last market order was executed.
 	MidPrice       float64 // (Lowest ask limit price + Highest bid l. p.) / 2
 	NumberOfOrders int     // The number of orders placed.
-	AskLimitsSize  float64
-	BidLimitsSize  float64
-	UidGenerator   *uid.UIDGenerator
+	AskLimitsSize  float64 // The sum of the qty of the ask limit orders.
+	BidLimitsSize  float64 // The sum of the qty of the bid limit orders.
+	uidGenerator   *uid.UIDGenerator
 	AskLimits      limits.Limits
 	BidLimits      limits.Limits
 	askLimitsMap   map[float64]*limit.Limit
 	bidLimitsMap   map[float64]*limit.Limit
 }
 
+/* Returns and allocates a new OrderBook. */
 func NewOrderBook(base, quote string) *OrderBook {
 	return &OrderBook{
 		base:           base,
@@ -35,7 +36,7 @@ func NewOrderBook(base, quote string) *OrderBook {
 		NumberOfOrders: 0,
 		AskLimitsSize:  0,
 		BidLimitsSize:  0,
-		UidGenerator:   uid.NewUIDGenerator(),
+		uidGenerator:   uid.NewUIDGenerator(),
 		AskLimits:      limits.NewLimits(),
 		BidLimits:      limits.NewLimits(),
 		askLimitsMap:   make(map[float64]*limit.Limit),
@@ -43,7 +44,7 @@ func NewOrderBook(base, quote string) *OrderBook {
 	}
 }
 
-/* Place limit order. */
+/* Place a limit order. */
 func (ob *OrderBook) PlaceOrder(t order.OrderType, price float64, qty float64,
 	issuer string) error {
 	if !ob.canPlaceOrder(price, t) {
@@ -51,7 +52,7 @@ func (ob *OrderBook) PlaceOrder(t order.OrderType, price float64, qty float64,
 			" price (%.2f)", t, price)
 		return errors.New(msg)
 	}
-	o := order.NewOrder(ob.UidGenerator.NewUID(), t, qty, issuer)
+	o := order.NewOrder(ob.uidGenerator.NewUID(), t, qty, issuer)
 	err := ob.placeOrder(price, o)
 	if err != nil {
 		return err
@@ -66,6 +67,7 @@ func (ob *OrderBook) PlaceOrder(t order.OrderType, price float64, qty float64,
 	return nil
 }
 
+/* Execute a market order. */
 func (ob *OrderBook) ExecuteOrder(t order.OrderType, qty float64,
 	issuer string) error {
 	if t == order.Buy && qty > ob.BidLimitsSize {
@@ -75,7 +77,7 @@ func (ob *OrderBook) ExecuteOrder(t order.OrderType, qty float64,
 		msg := fmt.Sprintf("order quantity too big (%.2f)", qty)
 		return errors.New(msg)
 	}
-	o := order.NewOrder(ob.UidGenerator.NewUID(), t, qty, issuer)
+	o := order.NewOrder(ob.uidGenerator.NewUID(), t, qty, issuer)
 	err := ob.executeOrder(o)
 	if err != nil {
 		return err
@@ -88,7 +90,35 @@ func (ob *OrderBook) ExecuteOrder(t order.OrderType, qty float64,
 	return nil
 }
 
-/* Execute market order. */
+func (ob *OrderBook) placeOrder(price float64, o *order.Order) error {
+	if o.OType == order.Buy {
+		if _, exists := ob.bidLimitsMap[price]; !exists {
+			l := limit.NewLimit(limit.Bid, price)
+			err := l.AddOrder(o)
+			if err != nil {
+				return err
+			}
+			ob.bidLimitsMap[price] = l
+			ob.BidLimits = ob.BidLimits.Insert(l)
+		} else {
+			ob.bidLimitsMap[price].AddOrder(o)
+		}
+	} else /* Sell Order */ {
+		if _, exists := ob.askLimitsMap[price]; !exists {
+			l := limit.NewLimit(limit.Ask, price)
+			err := l.AddOrder(o)
+			if err != nil {
+				return err
+			}
+			ob.askLimitsMap[price] = l
+			ob.AskLimits = ob.AskLimits.Insert(l)
+		} else {
+			ob.askLimitsMap[price].AddOrder(o)
+		}
+	}
+	return nil
+}
+
 func (ob *OrderBook) executeOrder(o *order.Order) error {
 	if o.OType == order.Sell {
 		if len(ob.BidLimits) == 0 {
@@ -150,35 +180,6 @@ func (ob *OrderBook) executeOrder(o *order.Order) error {
 	return nil
 }
 
-func (ob *OrderBook) placeOrder(price float64, o *order.Order) error {
-	if o.OType == order.Buy {
-		if _, exists := ob.bidLimitsMap[price]; !exists {
-			l := limit.NewLimit(limit.Bid, price)
-			err := l.AddOrder(o)
-			if err != nil {
-				return err
-			}
-			ob.bidLimitsMap[price] = l
-			ob.BidLimits = ob.BidLimits.Insert(l)
-		} else {
-			ob.bidLimitsMap[price].AddOrder(o)
-		}
-	} else /* Sell Order */ {
-		if _, exists := ob.askLimitsMap[price]; !exists {
-			l := limit.NewLimit(limit.Ask, price)
-			err := l.AddOrder(o)
-			if err != nil {
-				return err
-			}
-			ob.askLimitsMap[price] = l
-			ob.AskLimits = ob.AskLimits.Insert(l)
-		} else {
-			ob.askLimitsMap[price].AddOrder(o)
-		}
-	}
-	return nil
-}
-
 func (ob *OrderBook) canPlaceOrder(price float64, t order.OrderType) bool {
 	if t == order.Buy {
 		// Does not make sense to place a buy limit order
@@ -207,7 +208,8 @@ func (ob *OrderBook) updateMidPrice() {
 }
 
 func (ob OrderBook) String() string {
-	ret := fmt.Sprintf("___________________\nOrder book %s/%s:\n", ob.base, ob.quote)
+	ret := fmt.Sprintf("___________________\nOrder book %s/%s:\n",
+		ob.base, ob.quote)
 	var lim int
 	if len(ob.AskLimits) <= 10 {
 		lim = len(ob.AskLimits)
@@ -215,19 +217,25 @@ func (ob OrderBook) String() string {
 		lim = 10
 	}
 	for i := lim - 1; i >= 0; i-- {
-		ret += fmt.Sprintf("\033[31m[%.3f] orders: %d, size: %.1f, next order issuer: %s\033[0m\n", ob.AskLimits[i].Price, ob.AskLimits[i].OrdersCount(), ob.AskLimits[i].Size, ob.AskLimits[i].GetFirstOrder().Issuer)
+		ret += fmt.Sprintf("\033[31m[%.3f] orders: %d, size: %.1f, next order"+
+			" issuer: %s\033[0m\n", ob.AskLimits[i].Price,
+			ob.AskLimits[i].OrdersCount(), ob.AskLimits[i].Size,
+			ob.AskLimits[i].GetFirstOrder().Issuer)
 	}
-	ret += fmt.Sprintf("\n\033[0;34mMidprice: %.2f, Price: %.2f\nNumber of orders: %d, Ask lim. size: %.1f, Bid lim. size: %.1f\033[0m\n\n", ob.MidPrice, ob.Price, ob.NumberOfOrders, ob.AskLimitsSize, ob.BidLimitsSize)
-
+	ret += fmt.Sprintf("\n\033[0;34mMidprice: %.2f, Price: %.2f\nNumber of"+
+		" orders: %d, Ask lim. size: %.1f, Bid lim. size: %.1f\033[0m\n\n",
+		ob.MidPrice, ob.Price, ob.NumberOfOrders, ob.AskLimitsSize,
+		ob.BidLimitsSize)
 	if len(ob.BidLimits) <= 10 {
 		lim = len(ob.BidLimits)
 	} else {
 		lim = 10
 	}
-
 	for i := 0; i < lim; i++ {
-		ret += fmt.Sprintf("\033[32m[%.3f] orders: %d, size: %.1f, next order issuer: %s\033[0m\n", ob.BidLimits[i].Price, ob.BidLimits[i].OrdersCount(), ob.BidLimits[i].Size, ob.BidLimits[i].GetFirstOrder().Issuer)
+		ret += fmt.Sprintf("\033[32m[%.3f] orders: %d, size: %.1f, next order"+
+			" issuer: %s\033[0m\n", ob.BidLimits[i].Price,
+			ob.BidLimits[i].OrdersCount(), ob.BidLimits[i].Size,
+			ob.BidLimits[i].GetFirstOrder().Issuer)
 	}
-
 	return ret
 }

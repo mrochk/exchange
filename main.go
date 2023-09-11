@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	ex, addr, port := exchange.NewExchange(), "0.0.0.0", 8080
+	ex, addr, port := exchange.NewExchange(), "192.168.1.62", 8080
 	ex.NewOrderBook("EUR", "GBP")
 	s := server.NewServer(addr, port, ex)
 
@@ -22,11 +22,11 @@ func main() {
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 
-		output := fmt.Sprintf("Server listening on port %d...\n\n", port)
+		output := fmt.Sprintf("Server ready to receive requests on port %d...\n\n", port)
 		for _, v := range ex.OrderBooks {
 			output += fmt.Sprintln(v)
 		}
 		fmt.Println(output)
-		time.Sleep(time.Second)
+		time.Sleep(time.Second / 2)
 	}
 }

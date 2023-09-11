@@ -5,25 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/mrochk/exchange/exchange"
 	"github.com/mrochk/exchange/limits"
 	"github.com/mrochk/exchange/order"
 )
-
-type serverFunc func(http.ResponseWriter, *http.Request) error
-
-func makeHTTPHandleFunc(f serverFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		err := f(w, r)
-		if err != nil {
-			writeJSON(w, http.StatusBadRequest, err.Error())
-		}
-	}
-}
 
 type Server struct {
 	ListenAddr string
@@ -34,6 +23,17 @@ func NewServer(addr string, port int, exchange *exchange.Exchange) *Server {
 	return &Server{
 		ListenAddr: addr + ":" + strconv.FormatInt(int64(port), 10),
 		exchange:   exchange,
+	}
+}
+
+type serverFunc func(http.ResponseWriter, *http.Request) error
+
+func makeHTTPHandleFunc(f serverFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := f(w, r)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, err.Error())
+		}
 	}
 }
 
@@ -54,7 +54,7 @@ func (s *Server) Run() {
 	router.HandleFunc("/getorderbookdata", makeHTTPHandleFunc(s.handleGetOrderBookData))
 
 	if err := http.ListenAndServe(s.ListenAddr, router); err != nil {
-		fmt.Fprint(os.Stdout, err.Error())
+		log.Fatal(err)
 	}
 }
 
@@ -79,8 +79,44 @@ func (s *Server) handleGetOrderBooks(w http.ResponseWriter, r *http.Request) err
 }
 
 type placeOrderReq struct {
-	executeOrderRes
+	executeOrderReq
 	Price float64 `json:"price"`
+}
+
+func (s *Server) checkPlaceOrderReq(req placeOrderReq) error {
+	if req.Base == "" || req.Quote == "" {
+		msg := fmt.Sprintf("empty <base> (%s) or <quote> (%s) key",
+			req.Base, req.Base)
+		return errors.New(msg)
+	}
+
+	obID := req.Base + "/" + req.Quote
+	if !s.exchange.OrderbookExists(obID) {
+		msg := fmt.Sprintf("orderbook %s does not exist", obID)
+		return errors.New(msg)
+	}
+
+	if req.Type == "" {
+		msg := fmt.Sprintf("invalid type value (%s)", req.Type)
+		return errors.New(msg)
+	}
+
+	if req.Price <= 0.0 {
+		msg := fmt.Sprintf("invalid price value (%f)", req.Price)
+		return errors.New(msg)
+	}
+
+	if req.Qty <= 0.0 {
+		msg := fmt.Sprintf("invalid quantity value (%f)", req.Qty)
+		return errors.New(msg)
+	}
+
+	if req.Issuer == "" {
+		msg := fmt.Sprintf("empty issuer value (%s)", req.Issuer)
+		return errors.New(msg)
+	}
+
+	return nil
 }
 
 func (s *Server) handlePlaceOrder(w http.ResponseWriter, r *http.Request) error {
@@ -97,47 +133,27 @@ func (s *Server) handlePlaceOrder(w http.ResponseWriter, r *http.Request) error 
 	req := placeOrderReq{}
 	json.Unmarshal(data, &req)
 
-	if req.Base == "" || req.Quote == "" {
-		msg := fmt.Sprintf("empty <base> (%s) or <quote> (%s) key",
-			req.Base, req.Base)
-		return errors.New(msg)
+	err = s.checkPlaceOrderReq(req)
+	if err != nil {
+		return err
 	}
-	obID := req.Base + "/" + req.Quote
-	if !s.exchange.OrderbookExists(obID) {
-		msg := fmt.Sprintf("orderbook %s does not exist", obID)
-		return errors.New(msg)
-	}
+
 	var otype order.OrderType
 	if req.Type == "BUY" {
 		otype = order.Buy
-	} else if req.Type == "SELL" {
-		otype = order.Sell
 	} else {
-		msg := fmt.Sprintf("invalid type value (%s)", req.Type)
-		return errors.New(msg)
+		otype = order.Sell
 	}
-	if req.Price <= 0.0 {
-		msg := fmt.Sprintf("invalid price value (%f)", req.Price)
-		return errors.New(msg)
-	}
-	if req.Qty <= 0.0 {
-		msg := fmt.Sprintf("invalid quantity value (%f)", req.Qty)
-		return errors.New(msg)
-	}
-	if req.Issuer == "" {
-		msg := fmt.Sprintf("empty issuer value (%s)", req.Issuer)
-		return errors.New(msg)
-	}
-	err = s.exchange.PlaceOrder(req.Base, req.Quote, otype, req.Price,
-		req.Qty, req.Issuer)
-	if err != nil {
+
+	if err = s.exchange.PlaceOrder(req.Base, req.Quote, otype, req.Price,
+		req.Qty, req.Issuer); err != nil {
 		return err
 	}
 	writeJSON(w, http.StatusOK, "order placed")
 	return nil
 }
 
-type executeOrderRes struct {
+type executeOrderReq struct {
 	Base   string  `json:"base"`
 	Quote  string  `json:"quote"`
 	Type   string  `json:"type"`
@@ -145,9 +161,38 @@ type executeOrderRes struct {
 	Issuer string  `json:"issuer"`
 }
 
-func (s *Server) handleExecuteOrder(w http.ResponseWriter, r *http.Request) error {
-	var err error
+func (s *Server) checkExecuteOrderReq(req executeOrderReq) error {
+	if req.Base == "" || req.Quote == "" {
+		msg := fmt.Sprintf("empty <base> (%s) or <quote> (%s) key",
+			req.Base, req.Base)
+		return errors.New(msg)
+	}
 
+	obID := req.Base + "/" + req.Quote
+	if !s.exchange.OrderbookExists(obID) {
+		msg := fmt.Sprintf("orderbook %s does not exist", obID)
+		return errors.New(msg)
+	}
+
+	if req.Type == "" {
+		msg := fmt.Sprintf("invalid type value (%s)", req.Type)
+		return errors.New(msg)
+	}
+
+	if req.Qty <= 0.0 {
+		msg := fmt.Sprintf("invalid quantity value (%f)", req.Qty)
+		return errors.New(msg)
+	}
+
+	if req.Issuer == "" {
+		msg := fmt.Sprintf("empty issuer value (%s)", req.Issuer)
+		return errors.New(msg)
+	}
+
+	return nil
+}
+
+func (s *Server) handleExecuteOrder(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodPost {
 		msg := fmt.Sprintf("method not allowed: (%s)", r.Method)
 		return errors.New(msg)
@@ -158,42 +203,27 @@ func (s *Server) handleExecuteOrder(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 
-	req := executeOrderRes{}
+	req := executeOrderReq{}
 	json.Unmarshal(data, &req)
 
-	if req.Base == "" || req.Quote == "" {
-		msg := fmt.Sprintf("empty <base> (%s) or <quote> (%s) key",
-			req.Base, req.Base)
-		return errors.New(msg)
+	err = s.checkExecuteOrderReq(req)
+	if err != nil {
+		return err
 	}
-	obID := req.Base + "/" + req.Quote
-	if !s.exchange.OrderbookExists(obID) {
-		msg := fmt.Sprintf("orderbook %s does not exist", obID)
-		return errors.New(msg)
-	}
+
 	var otype order.OrderType
 	if req.Type == "BUY" {
 		otype = order.Buy
-	} else if req.Type == "SELL" {
-		otype = order.Sell
 	} else {
-		msg := fmt.Sprintf("invalid type value (%s)", req.Type)
-		return errors.New(msg)
+		otype = order.Sell
 	}
-	if req.Qty <= 0.0 {
-		msg := fmt.Sprintf("invalid quantity value (%f)", req.Qty)
-		return errors.New(msg)
-	}
-	if req.Issuer == "" {
-		msg := fmt.Sprintf("empty issuer value (%s)", req.Issuer)
-		return errors.New(msg)
-	}
+
 	err = s.exchange.ExecuteOrder(req.Base, req.Quote, otype, req.Qty,
 		req.Issuer)
 	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusOK, "order placed")
+	writeJSON(w, http.StatusOK, "order executed")
 	return nil
 }
 
@@ -217,9 +247,8 @@ type getOrderBookDataRes struct {
 func (s *Server) handleGetOrderBookData(w http.ResponseWriter,
 	r *http.Request) error {
 	if r.Method != http.MethodGet {
-		msg := fmt.Sprintf("method not allowed: (%s)", r.Method)
+		msg := fmt.Sprintf("HTTP method not allowed: (%s)", r.Method)
 		return errors.New(msg)
-
 	}
 
 	data, err := io.ReadAll(r.Body)

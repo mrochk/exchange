@@ -1,7 +1,6 @@
 package order
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -35,12 +34,4 @@ func (t OrderType) String() string {
 		return "BUY"
 	}
 	return "SELL"
-}
-
-func (o Order) String() string {
-	ret := fmt.Sprintf("{Order %d, ", o.Identifier)
-	ret += fmt.Sprintf("type:  %s, ", o.OType)
-	ret += fmt.Sprintf("qty:  %.1f, ", o.Quantity)
-	ret += fmt.Sprintf("issuer:  %s}", o.Issuer)
-	return ret
 }

@@ -28,23 +28,29 @@ func (q *OrderQ) Insert(o *order.Order) {
 	q.Size++
 }
 
+/*
+Returns the first element of the order queue,
+or nil if the queue is empty.
+*/
 func (q *OrderQ) GetFirstOrder() *order.Order {
 	if q.Empty() {
 		return nil
 	}
-	ret := q.first.data
-	return ret
+	return q.first.data
 }
 
-// Must check if return value is not nil (empty queue).
+/*
+Returns and removes the first element of the order queue,
+or nil if the queue is empty.
+*/
 func (q *OrderQ) PopFirstOrder() *order.Order {
 	if q.Empty() {
 		return nil
 	}
-	ret := q.first.data
+	result := q.first.data
 	q.first = q.first.next
 	q.Size--
-	return ret
+	return result
 }
 
 func (q OrderQ) Empty() bool {

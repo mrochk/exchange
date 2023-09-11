@@ -1,9 +1,8 @@
 # Exchange
-Market exchange simulation and JSON API.
+A market exchange simulation that can be called through a JSON API.
 
-This is a market exchange I made from scratch, it does not not rely any third-party dependency, only the Go standard library. 
-
-The engine implements Price/Time algorithm (FIFO) for matching orders. 
+This is a market exchange I made from scratch, it does not not rely any third-party dependency. \
+The engine implements Price/Time (FIFO) algorithm for matching orders. 
 
 For now, it is only possible to place "basic" types of orders (market and limit).
 
