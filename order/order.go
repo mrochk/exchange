@@ -10,6 +10,7 @@ type Order struct {
 	Quantity   float64
 	Timestamp  int64
 	Issuer     string
+	Canceled   bool
 }
 
 type OrderType int
@@ -26,6 +27,7 @@ func NewOrder(id int64, t OrderType, qty float64, issuer string) *Order {
 		Quantity:   qty,
 		Timestamp:  time.Now().Unix(),
 		Issuer:     issuer,
+		Canceled:   false,
 	}
 }
 

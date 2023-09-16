@@ -46,16 +46,17 @@ func NewOrderBook(base, quote string) *OrderBook {
 
 /* Place a limit order. */
 func (ob *OrderBook) PlaceOrder(t order.OrderType, price float64, qty float64,
-	issuer string) error {
+	issuer string) (error, int64) {
 	if !ob.canPlaceOrder(price, t) {
 		msg := fmt.Sprintf("can not place this type of order (%s) at this"+
 			" price (%.2f)", t, price)
-		return errors.New(msg)
+		return errors.New(msg), 0
 	}
 	o := order.NewOrder(ob.uidGenerator.NewUID(), t, qty, issuer)
+	id := o.Identifier
 	err := ob.placeOrder(price, o)
 	if err != nil {
-		return err
+		return err, 0
 	}
 	if t == order.Buy {
 		ob.BidLimitsSize += qty
@@ -64,7 +65,7 @@ func (ob *OrderBook) PlaceOrder(t order.OrderType, price float64, qty float64,
 	}
 	ob.updateMidPrice()
 	ob.NumberOfOrders++
-	return nil
+	return nil, id
 }
 
 /* Execute a market order. */
@@ -88,6 +89,16 @@ func (ob *OrderBook) ExecuteOrder(t order.OrderType, qty float64,
 		ob.AskLimitsSize -= qty
 	}
 	return nil
+}
+
+func (ob *OrderBook) CancelOrder(t order.OrderType, price float64,
+	orderID int64) bool {
+	if t == order.Buy {
+		l := ob.bidLimitsMap[price]
+		return l.DeleteOrder(orderID)
+	}
+	l := ob.askLimitsMap[price]
+	return l.DeleteOrder(orderID)
 }
 
 func (ob *OrderBook) placeOrder(price float64, o *order.Order) error {

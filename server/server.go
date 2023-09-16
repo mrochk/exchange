@@ -52,6 +52,7 @@ func (s *Server) Run() {
 	router.HandleFunc("/placeorder", makeHTTPHandleFunc(s.handlePlaceOrder))
 	router.HandleFunc("/executeorder", makeHTTPHandleFunc(s.handleExecuteOrder))
 	router.HandleFunc("/getorderbookdata", makeHTTPHandleFunc(s.handleGetOrderBookData))
+	router.HandleFunc("/cancelorder", makeHTTPHandleFunc(s.handleCancelOrder))
 
 	if err := http.ListenAndServe(s.ListenAddr, router); err != nil {
 		log.Fatal(err)
@@ -81,6 +82,10 @@ func (s *Server) handleGetOrderBooks(w http.ResponseWriter, r *http.Request) err
 type placeOrderReq struct {
 	executeOrderReq
 	Price float64 `json:"price"`
+}
+
+type placeOrderRes struct {
+	OrderID int64 `json:"order_id"`
 }
 
 func (s *Server) checkPlaceOrderReq(req placeOrderReq) error {
@@ -130,6 +135,8 @@ func (s *Server) handlePlaceOrder(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 
+	writeJSON(w, 200, len(data))
+
 	req := placeOrderReq{}
 	json.Unmarshal(data, &req)
 
@@ -145,11 +152,12 @@ func (s *Server) handlePlaceOrder(w http.ResponseWriter, r *http.Request) error 
 		otype = order.Sell
 	}
 
-	if err = s.exchange.PlaceOrder(req.Base, req.Quote, otype, req.Price,
-		req.Qty, req.Issuer); err != nil {
+	err, id := s.exchange.PlaceOrder(req.Base, req.Quote, otype, req.Price, req.Qty, req.Issuer)
+
+	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusOK, "order placed")
+	writeJSON(w, http.StatusOK, &placeOrderRes{OrderID: id})
 	return nil
 }
 
@@ -292,11 +300,11 @@ func (s *Server) handleGetOrderBookData(w http.ResponseWriter,
 	return nil
 }
 
-type RegisterUserReq struct {
+type registerUserReq struct {
 	Username string `json:"username"`
 }
 
-type RegisterUserRes struct {
+type registerUserRes struct {
 	Uid int64 `json:"uid"`
 }
 
@@ -306,12 +314,52 @@ func (s *Server) handleRegisterUser(w http.ResponseWriter,
 	if err != nil {
 		return err
 	}
-	data := RegisterUserReq{}
+	data := registerUserReq{}
 	err = json.Unmarshal(buffer, &data)
 	if err != nil {
 		return err
 	}
 	uid := s.exchange.RegisterUser(data.Username)
-	writeJSON(w, http.StatusOK, &RegisterUserRes{uid})
+	writeJSON(w, http.StatusOK, &registerUserRes{uid})
 	return nil
+}
+
+type cancelOrderReq struct {
+	Base    string  `json:"base"`
+	Quote   string  `json:"quote"`
+	Price   float64 `json:"price"`
+	Type    string  `json:"type"`
+	OrderID int64   `json:"order_id"`
+}
+
+func (s *Server) handleCancelOrder(w http.ResponseWriter,
+	r *http.Request) error {
+	buffer, err := io.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	data := cancelOrderReq{}
+	err = json.Unmarshal(buffer, &data)
+	if err != nil {
+		return err
+	}
+
+	var t order.OrderType
+	if data.Type == "BUY" {
+		t = order.Buy
+	} else if data.Type == "SELL" {
+		t = order.Buy
+	} else {
+		return errors.New("invalid type value")
+	}
+
+	ob := s.exchange.GetOrderBook(data.Base, data.Quote)
+	success := ob.CancelOrder(t, data.Price, data.OrderID)
+
+	if success {
+		writeJSON(w, http.StatusOK, "order canceled")
+		return nil
+	}
+
+	return errors.New("impossible to cancel order")
 }

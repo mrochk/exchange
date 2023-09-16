@@ -41,11 +41,11 @@ func (e *Exchange) RegisterUser(username string) int64 {
 }
 
 func (e *Exchange) PlaceOrder(base string, quote string, t order.OrderType,
-	price float64, qty float64, issuer string) error {
+	price float64, qty float64, issuer string) (error, int64) {
 	obID := base + "/" + quote
 	if !e.OrderbookExists(obID) {
 		msg := fmt.Sprintf("order book %s, does not exist", obID)
-		return errors.New(msg)
+		return errors.New(msg), 0
 	}
 	return e.OrderBooks[obID].PlaceOrder(t, price, qty, issuer)
 }

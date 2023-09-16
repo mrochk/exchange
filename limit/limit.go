@@ -6,13 +6,15 @@ import (
 
 	"github.com/mrochk/exchange/order"
 	"github.com/mrochk/exchange/orderq"
+	"github.com/mrochk/exchange/orderset"
 )
 
 type Limit struct {
-	LType  LimitType
-	Price  float64
-	Size   float64
-	orders orderq.OrderQ
+	LType     LimitType
+	Price     float64
+	Size      float64
+	orders    orderq.OrderQ
+	OrdersSet orderset.Set
 }
 
 type LimitType int
@@ -24,10 +26,11 @@ const (
 
 func NewLimit(t LimitType, price float64) *Limit {
 	return &Limit{
-		LType:  t,
-		Price:  price,
-		Size:   0,
-		orders: orderq.NewOrderQ(),
+		LType:     t,
+		Price:     price,
+		Size:      0,
+		orders:    orderq.NewOrderQ(),
+		OrdersSet: orderset.NewSet(),
 	}
 }
 
@@ -37,6 +40,7 @@ func (l *Limit) AddOrder(o *order.Order) error {
 			l.LType, o.OType)
 		return errors.New(msg)
 	}
+	l.OrdersSet.Insert(o.Identifier)
 	l.orders.Insert(o)
 	l.Size += o.Quantity
 	return nil
@@ -49,6 +53,19 @@ func (l *Limit) PopFirstOrder() *order.Order {
 
 func (l *Limit) GetFirstOrder() *order.Order {
 	return l.orders.GetFirstOrder()
+}
+
+func (l *Limit) DeleteOrder(orderID int64) bool {
+	if !l.OrdersSet.Exists(orderID) {
+		return false
+	}
+	qty := l.orders.DeleteOrder(orderID)
+	l.OrdersSet.Delete(orderID)
+	if qty > 0 {
+		l.Size -= qty
+		return true
+	}
+	return false
 }
 
 func (l Limit) OrdersCount() int {

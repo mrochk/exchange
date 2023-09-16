@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	ex, addr, port := exchange.NewExchange(), "192.168.1.62", 8080
+	ex, addr, port := exchange.NewExchange(), "127.0.0.1", 8080
 	ex.NewOrderBook("EUR", "GBP")
 	s := server.NewServer(addr, port, ex)
 
