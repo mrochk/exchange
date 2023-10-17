@@ -47,11 +47,11 @@ func writeJSON(w http.ResponseWriter, status int, v any) error {
 func (s *Server) Run() {
 	router := http.NewServeMux()
 
-	router.HandleFunc("/getorderbooks", makeHTTPHandleFunc(s.handleGetOrderBooks))
+	router.HandleFunc("/orderbooks", makeHTTPHandleFunc(s.handleOrderBooks))
 	router.HandleFunc("/registeruser", makeHTTPHandleFunc(s.handleRegisterUser))
 	router.HandleFunc("/placeorder", makeHTTPHandleFunc(s.handlePlaceOrder))
 	router.HandleFunc("/executeorder", makeHTTPHandleFunc(s.handleExecuteOrder))
-	router.HandleFunc("/getorderbookdata", makeHTTPHandleFunc(s.handleGetOrderBookData))
+	router.HandleFunc("/orderbookdata", makeHTTPHandleFunc(s.handleOrderBookData))
 	router.HandleFunc("/cancelorder", makeHTTPHandleFunc(s.handleCancelOrder))
 
 	if err := http.ListenAndServe(s.ListenAddr, router); err != nil {
@@ -59,11 +59,11 @@ func (s *Server) Run() {
 	}
 }
 
-type getOrderBooksRes struct {
+type orderBooksRes struct {
 	OrderBooks []string `json:"order_books"`
 }
 
-func (s *Server) handleGetOrderBooks(w http.ResponseWriter, r *http.Request) error {
+func (s *Server) handleOrderBooks(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodGet {
 		msg := fmt.Sprintf("Method not allowed: %s", r.Method)
 		return errors.New(msg)
@@ -75,7 +75,7 @@ func (s *Server) handleGetOrderBooks(w http.ResponseWriter, r *http.Request) err
 		i++
 	}
 
-	writeJSON(w, http.StatusOK, getOrderBooksRes{list})
+	writeJSON(w, http.StatusOK, orderBooksRes{list})
 	return nil
 }
 
@@ -235,12 +235,12 @@ func (s *Server) handleExecuteOrder(w http.ResponseWriter, r *http.Request) erro
 	return nil
 }
 
-type getOrderBookDataReq struct {
+type orderBookDataReq struct {
 	Base  string `json:"base"`
 	Quote string `json:"quote"`
 }
 
-type getOrderBookDataRes struct {
+type orderBookDataRes struct {
 	Base           string        `json:"base"`
 	Quote          string        `json:"quote"`
 	Price          float64       `json:"price"`
@@ -252,7 +252,7 @@ type getOrderBookDataRes struct {
 	BidLimits      limits.Limits `json:"bid_limits"`
 }
 
-func (s *Server) handleGetOrderBookData(w http.ResponseWriter,
+func (s *Server) handleOrderBookData(w http.ResponseWriter,
 	r *http.Request) error {
 	if r.Method != http.MethodGet {
 		msg := fmt.Sprintf("HTTP method not allowed: (%s)", r.Method)
@@ -264,7 +264,7 @@ func (s *Server) handleGetOrderBookData(w http.ResponseWriter,
 		return err
 	}
 
-	req := getOrderBookDataReq{}
+	req := orderBookDataReq{}
 	json.Unmarshal(data, &req)
 
 	if req.Base == "" {
@@ -284,7 +284,7 @@ func (s *Server) handleGetOrderBookData(w http.ResponseWriter,
 
 	ob := s.exchange.GetOrderBook(req.Base, req.Quote)
 
-	result := getOrderBookDataRes{
+	result := orderBookDataRes{
 		Base:           req.Base,
 		Quote:          req.Quote,
 		Price:          ob.Price,
@@ -305,11 +305,17 @@ type registerUserReq struct {
 }
 
 type registerUserRes struct {
-	Uid int64 `json:"uid"`
+	UID int64 `json:"uid"`
 }
 
 func (s *Server) handleRegisterUser(w http.ResponseWriter,
 	r *http.Request) error {
+
+	if r.Method != http.MethodPost {
+		msg := fmt.Sprintf("HTTP method not allowed: (%s)", r.Method)
+		return errors.New(msg)
+	}
+
 	buffer, err := io.ReadAll(r.Body)
 	if err != nil {
 		return err
