@@ -234,7 +234,7 @@ func (ob OrderBook) String() string {
 			ob.AskLimits[i].GetFirstOrder().Issuer)
 	}
 	ret += fmt.Sprintf("\n\033[0;34mMidprice: %.2f, Price: %.2f\nNumber of"+
-		" orders: %d, Ask lim. size: %.1f, Bid lim. size: %.1f\033[0m\n\n",
+		" orders: %d, Ask limits size: %.1f, Bid limits size: %.1f\033[0m\n\n",
 		ob.MidPrice, ob.Price, ob.NumberOfOrders, ob.AskLimitsSize,
 		ob.BidLimitsSize)
 	if len(ob.BidLimits) <= 10 {

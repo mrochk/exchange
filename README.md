@@ -1,21 +1,22 @@
 # Exchange
 A market exchange simulation that can be called through a JSON API.
 
-I made it from scratch, it does not not rely any third-party dependency. \
-The engine implements the Price/Time (First In First Out) algorithm for matching orders. 
+<img src="sc.png" alt="Screenshot" width="800" height="">
+
+
+It is made from scratch, it does not not rely any third-party dependency. \
+The matching engine implements the Price/Time (First In First Out) algorithm. 
 
 For now, it is only possible to place the two "basic" types of orders (market and limit).\
-Also, canceling orders is not fully implemented yet, at least not efficiently.
+Canceling orders is not fully implemented yet, at least not efficiently.\
+Also, this project will be rewritten in a much cleaner way and with better error handling when I'll have some time.
 
-Here are the different API endpoints you can call once the server is launched:
+Here are the different API endpoints you can call once the server is launched,\
+with the method you must use and the expected body JSON fields:
 
 - `/orderbooks`: returns the list of all open orderbooks
 - - GET
-- `/register`: returns the ID the user must use to place orders
-- - POST
-- - Body:
-- - - "username": string
-- `/placeorder`: place a limit order and return the order ID
+- `/placeorder`: places a limit order and returns its ID
 - - POST
 - - Body:
 - - - "base": string (e.g "USD")
@@ -24,7 +25,7 @@ Here are the different API endpoints you can call once the server is launched:
 - - - "quantity": float
 - - - "issuer": string (e.g "Maxime")
 - - - "price": float 
-- `/cancelorder`: cancel a limit order if it has not already been executed
+- `/cancelorder`: cancels a limit order if it has not already been executed
 - - POST
 - - Body:
 - - - "base": string 
@@ -32,7 +33,7 @@ Here are the different API endpoints you can call once the server is launched:
 - - - "type": string
 - - - "price": float 
 - - - "order_id": int
-- `/executeorder`: execute a market order
+- `/executeorder`: executes a market order
 - - POST
 - - Body:
 - - - "base": string
@@ -40,7 +41,7 @@ Here are the different API endpoints you can call once the server is launched:
 - - - "type": string 
 - - - "quantity": float
 - - - "issuer": string
-- `/orderbookdata`: returns informations about the order-book
+- `/orderbookdata`: returns information about the order book
 - - GET
 - - Body:
 - - - "base": string

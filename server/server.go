@@ -135,8 +135,6 @@ func (s *Server) handlePlaceOrder(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 
-	writeJSON(w, 200, len(data))
-
 	req := placeOrderReq{}
 	json.Unmarshal(data, &req)
 
