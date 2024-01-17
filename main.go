@@ -34,6 +34,8 @@ func main() {
 		f += 0.21
 	}
 
+	ex.ExecuteOrder("EUR", "GBP", order.Buy, 1, "maxime")
+
 	go s.Run()
 
 	for {
