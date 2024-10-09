@@ -1,7 +1,7 @@
 # Exchange
 Market exchange simulation.
 
-<img src="sc.png" alt="Screenshot" width="800">
+<img src="sc.png" alt="Screenshot" width="500">
 
 It is made from scratch, it does not not rely any third-party dependency except Go's stdlib. \
 The matching engine implements the Price/Time (First In First Out) algorithm. 
